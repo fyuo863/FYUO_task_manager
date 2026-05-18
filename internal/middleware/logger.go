@@ -12,6 +12,6 @@ func Logger() gin.HandlerFunc {
 		start := time.Now() //开始计时
 		ctx.Next()          //先运行下一个中间件
 		duration := time.Since(start)
-		log.Logger.Info("", "耗时", duration)
+		log.Logger.Info("", "详情", ctx.Keys, "耗时", duration)
 	}
 }
