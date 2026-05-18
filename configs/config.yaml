@@ -1,0 +1,3 @@
+Server:
+  port: ":8090"
+  mode: "test"  #gin 运行模式: debug | release | test
