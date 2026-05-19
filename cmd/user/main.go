@@ -1,20 +1,18 @@
 package main
 
 import (
+	"FYUO_task_manager/internal/config"
+	"FYUO_task_manager/internal/database"
+	"FYUO_task_manager/internal/router"
 	"FYUO_task_manager/pkg/log"
-	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"FYUO_task_manager/internal/config"
-	"FYUO_task_manager/internal/database"
-	"FYUO_task_manager/internal/router"
-	"FYUO_task_manager/internal/worker"
 )
 
+// 用户端, 只提供接口, 不涉及Worker Pool等后台处理逻辑
 func main() {
 	log.LogSetting()
 	cfg, err := config.Load("configs/config.yaml") // cfg 为读取到的配置
@@ -25,6 +23,7 @@ func main() {
 	if err := database.InitRedis(&cfg.Redis); err != nil {
 		log.Logger.Fatalf("[启动失败] 初始化Redis: %v", err)
 	}
+	defer database.CloseRedis() //关闭Redis连接
 
 	log.Logger.Info("[Config]", "端口号", cfg.Server.Port, "运行模式", cfg.Server.Mode)
 	r := router.Setup(cfg.Server.Mode)
@@ -43,11 +42,6 @@ func main() {
 			log.Logger.Fatal("[Server]", "服务启动失败, err", err)
 		}
 	}()
-
-	pool := worker.NewPool(5, 100)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	pool.Start(ctx)
 
 	sig := <-quit //阻塞Http协程直至触发退出
 	log.Logger.Info("[Server]", "接收到退出信号", sig)

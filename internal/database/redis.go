@@ -30,3 +30,13 @@ func InitRedis(cfg *config.RedisConfig) error {
 	log.Logger.Info("[Config]", "Redis初始化成功", con)
 	return nil
 }
+
+func CloseRedis() {
+	if RDB != nil {
+		if err := RDB.Close(); err != nil {
+			log.Logger.Info("[Redis]", "关闭连接时发生错误", err)
+			return
+		}
+		log.Logger.Info("[Redis] 连接已正常关闭")
+	}
+}

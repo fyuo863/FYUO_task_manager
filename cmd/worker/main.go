@@ -1,18 +1,15 @@
 package main
 
 import (
+	"FYUO_task_manager/internal/config"
+	"FYUO_task_manager/internal/database"
+	"FYUO_task_manager/internal/worker"
 	"FYUO_task_manager/pkg/log"
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"FYUO_task_manager/internal/config"
-	"FYUO_task_manager/internal/database"
-	"FYUO_task_manager/internal/router"
-	"FYUO_task_manager/internal/worker"
 )
 
 func main() {
@@ -25,29 +22,31 @@ func main() {
 	if err := database.InitRedis(&cfg.Redis); err != nil {
 		log.Logger.Fatalf("[启动失败] 初始化Redis: %v", err)
 	}
+	defer database.CloseRedis() //关闭Redis连接
 
 	log.Logger.Info("[Config]", "端口号", cfg.Server.Port, "运行模式", cfg.Server.Mode)
-	r := router.Setup(cfg.Server.Mode)
 
-	srv := &http.Server{
-		Addr:    cfg.Server.ServeAddr(),
-		Handler: r, // 将 Gin 引擎作为 HTTP Handler 传入
-	}
+	pool := worker.NewPool(5, 100) //新建worker pool
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	pool.Start(ctx)
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT) //监测是否触发Ctrl+C
 
-	go func() { //在协程中启动Http服务
-		log.Logger.Info("[Server]", "HTTP 服务启动于", cfg.Server.ServeAddr())
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Logger.Fatal("[Server]", "服务启动失败, err", err)
+	go func() {
+		log.Logger.Info("[Worker] 主循环已启动，等待任务队列...")
+		for {
+			// 每次循环开始前检查是否收到了退出信号
+			select {
+			case <-ctx.Done():
+				log.Logger.Info("[Worker] 主循环收到退出信号，停止接收新任务")
+				return
+			default:
+			}
+			pool.ListenQueue(ctx, database.RDB)
 		}
 	}()
-
-	pool := worker.NewPool(5, 100)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	pool.Start(ctx)
 
 	sig := <-quit //阻塞Http协程直至触发退出
 	log.Logger.Info("[Server]", "接收到退出信号", sig)

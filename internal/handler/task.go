@@ -61,6 +61,7 @@ func CreateTask(c *gin.Context) {
 		"data":         task,
 		"queue_length": length,
 	})
+
 }
 
 // 测试手动从队列取出任务
