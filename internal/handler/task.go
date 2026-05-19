@@ -50,9 +50,16 @@ func CreateTask(c *gin.Context) {
 	}
 
 	// TODO: 推入Redis List
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) //设置超时上下文，防止Redis操作阻塞过久
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second) //设置超时上下文，防止Redis操作阻塞过久
 	defer cancel()
-	queue.EnqueueTask(ctx, database.RDB, &task) //将任务推入Redis队列，供Worker异步处理
+	err := queue.EnqueueTask(ctx, database.RDB, &task) //将任务推入Redis队列，供Worker异步处理
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "任务入队失败",
+		})
+		return
+	}
 
 	length, err := database.RDB.LLen(ctx, queue.TaskQueueKey).Result()
 	if err != nil {

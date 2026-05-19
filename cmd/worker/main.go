@@ -50,19 +50,15 @@ func main() {
 
 	go func() {
 		log.Logger.Info("[Worker] 主循环已启动，等待任务队列...")
-		for {
-			// 每次循环开始前检查是否收到了退出信号
-			select {
-			case <-ctx.Done():
-				log.Logger.Info("[Worker] 主循环收到退出信号，停止接收新任务")
-				return
-			default:
-			}
-			pool.ListenQueue(ctx, database.RDB)
-		}
+
+		pool.ListenQueue(ctx, database.RDB)
+
 	}()
 
 	sig := <-quit //阻塞Http协程直至触发退出
 	log.Logger.Info("[Server]", "接收到退出信号", sig)
-	defer func() { log.Logger.Error("安全退出占位") }()
+	defer func() {
+		log.Logger.Error("安全退出占位")
+		pool.Stop()
+	}()
 }

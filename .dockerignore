@@ -1,0 +1,10 @@
+.git
+.gitignore
+*.md
+LICENSE
+test/
+.vscode/
+.idea/
+docker-compose.yml
+Dockerfile
+.dockerignore
