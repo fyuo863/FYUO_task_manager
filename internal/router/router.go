@@ -25,6 +25,7 @@ func Setup(mode string) *gin.Engine { //Gin 运行模式
 	v1 := menu.Group("/v1")
 	{
 		v1.POST("/tasks", handler.CreateTask)
+		v1.GET("/tasks", handler.PopTasks)
 	}
 
 	return r

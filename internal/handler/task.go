@@ -1,7 +1,11 @@
 package handler
 
 import (
+	"FYUO_task_manager/internal/database"
 	"FYUO_task_manager/internal/model"
+	"FYUO_task_manager/internal/queue"
+	"FYUO_task_manager/pkg/log"
+	"context"
 	"net/http"
 	"time"
 
@@ -37,15 +41,45 @@ func CreateTask(c *gin.Context) {
 		Status: model.TaskStatusRunning,
 	}
 
-	c.JSON(http.StatusOK, gin.H{ //返回响应
-		"code": 200,
-		"data": task,
-	})
+	// c.JSON(http.StatusOK, gin.H{ //返回响应
+	// 	"code": 200,
+	// 	"data": task,
+	// })
 
 	// TODO: 推入Redis List
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) //设置超时上下文，防止Redis操作阻塞过久
+	defer cancel()
+	queue.EnqueueTask(ctx, database.RDB, &task) //将任务推入Redis队列，供Worker异步处理
 
+	length, err := database.RDB.LLen(ctx, queue.TaskQueueKey).Result()
+	if err != nil {
+		//fmt.Errorf("获取队列长度失败: %w", err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{ //返回响应
+		"code":         200,
+		"data":         task,
+		"queue_length": length,
+	})
 }
 
-func ListTasks(c *gin.Context) {
-
+// 测试手动从队列取出任务
+func PopTasks(c *gin.Context) {
+	task, err := queue.DequeueTask(context.Background(), database.RDB)
+	if err != nil {
+		log.Logger.Error("[Handler]", "从队列取出任务失败: ", err)
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) //设置超时上下文，防止Redis操作阻塞过久
+	defer cancel()
+	length, err := database.RDB.LLen(ctx, queue.TaskQueueKey).Result()
+	if err != nil {
+		//fmt.Errorf("获取队列长度失败: %w", err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{ //返回响应
+		"code":         200,
+		"data":         task,
+		"queue_length": length,
+	})
 }

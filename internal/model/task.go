@@ -8,7 +8,7 @@ type Task struct {
 	// 内容:
 	// 时间:{创建时间，结束时间}
 	// 状态:进行中、已完成、失败
-	ID      int        `json:"id"`
+	ID      uint       `json:"id"`
 	Title   string     `json:"title"`
 	Author  string     `json:"author"`
 	Content string     `json:"content"`

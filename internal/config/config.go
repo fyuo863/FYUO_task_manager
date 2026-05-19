@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -13,14 +14,23 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port string `mapstructure:"port"` // 服务监听端口
+	Host string `mapstructure:"host"` // 服务监听地址
+	Port int    `mapstructure:"port"` // 服务监听端口
 	Mode string `mapstructure:"mode"` // Gin 运行模式: debug / release / test
 }
 
 type DatabaseConfig struct {
+	Host string `mapstructure:"host"`
+	Port int    `mapstructure:"port"`
 }
 
 type RedisConfig struct {
+	Host         string        `mapstructure:"host"`
+	Port         int           `mapstructure:"port"`
+	Password     string        `mapstructure:"password"`
+	DB           int           `mapstructure:"db"`            // Redis 数据库编号
+	PoolSize     int           `mapstructure:"pool_size"`     // 连接池大小
+	QueryTimeout time.Duration `mapstructure:"query_timeout"` // 单次操作超时时间
 }
 
 func Load(configPath string) (*Config, error) {
@@ -38,4 +48,22 @@ func Load(configPath string) (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+// Addr 返回 Redis 连接地址
+// func (s *ServerConfig) Serve() *ServerConfig        { return s }
+// func (r *RedisConfig) Redis() *RedisConfig          { return r }
+// func (r *DatabaseConfig) Database() *DatabaseConfig { return r }
+//
+//	func (r *RedisConfig) Addr() string {
+//		return fmt.Sprintf("%s:%d", r.Host, r.Port)
+//	}
+func (s *ServerConfig) ServeAddr() string {
+	return fmt.Sprintf("%s:%d", s.Host, s.Port)
+}
+func (r *RedisConfig) RedisAddr() string {
+	return fmt.Sprintf("%s:%d", r.Host, r.Port)
+}
+func (d *DatabaseConfig) DatabaseAddr() string {
+	return fmt.Sprintf("%s:%d", d.Host, d.Port)
 }

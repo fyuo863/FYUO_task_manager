@@ -2,12 +2,14 @@ package main
 
 import (
 	"FYUO_task_manager/pkg/log"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"FYUO_task_manager/internal/config"
+	"FYUO_task_manager/internal/database"
 	"FYUO_task_manager/internal/router"
 )
 
@@ -17,11 +19,16 @@ func main() {
 	if err != nil {
 		log.Logger.Fatalf("[启动失败] 加载配置: %v", err)
 	}
+	fmt.Println(cfg)
+	if err := database.InitRedis(&cfg.Redis); err != nil {
+		log.Logger.Fatalf("[启动失败] 初始化Redis: %v", err)
+	}
+
 	log.Logger.Info("[Config]", "端口号", cfg.Server.Port, "运行模式", cfg.Server.Mode)
 	r := router.Setup(cfg.Server.Mode)
 
 	srv := &http.Server{
-		Addr:    cfg.Server.Port,
+		Addr:    cfg.Server.ServeAddr(),
 		Handler: r, // 将 Gin 引擎作为 HTTP Handler 传入
 	}
 
@@ -29,7 +36,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT) //监测是否触发Ctrl+C
 
 	go func() { //在协程中启动Http服务
-		log.Logger.Info("[Server]", "HTTP 服务启动于", cfg.Server.Port)
+		log.Logger.Info("[Server]", "HTTP 服务启动于", cfg.Server.ServeAddr())
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Logger.Fatal("[Server]", "服务启动失败, err", err)
 		}
