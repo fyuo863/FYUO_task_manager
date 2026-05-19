@@ -51,7 +51,10 @@ FROM base AS user
 COPY --from=builder /app/bin/user /app/server
 EXPOSE 8090
 CMD ["/app/server"]
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+  CMD curl -f http://localhost:8090/health || exit 1
 
+ENTRYPOINT ["/app/server"]
 
 # ==============================
 # 目标 3: 仅 Worker
@@ -59,3 +62,5 @@ CMD ["/app/server"]
 FROM base AS worker
 COPY --from=builder /app/bin/worker /app/worker
 CMD ["/app/worker"]
+
+

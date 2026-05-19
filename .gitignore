@@ -1,0 +1,31 @@
+# --- 编译产物 ---
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.env
+/bin/
+/output/
+
+# --- Go 依赖 ---
+vendor/
+
+# --- 配置文件 (敏感信息) ---
+# .env
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Docker (镜像不需要进仓库) ---
+# Dockerfile 和 docker-compose.yml 应提交到仓库
