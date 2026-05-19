@@ -1,5 +1,13 @@
 @baseUrl = http://localhost:8090/api
 
 GET {{baseUrl}}/test
+
+###
+
+POST {{baseUrl}}/v1/tasks
 Content-Type: application/json
 
+{
+    "Title": "标题测试",
+    "Content": "内容测试🐮"
+}
