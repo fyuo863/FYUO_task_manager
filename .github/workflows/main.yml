@@ -1,0 +1,124 @@
+name: Task Manager CI
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 1. 代码检查
+  lint:
+    name: Lint & Vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.2' 
+          cache: true
+
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+      - name: Run golangci-lint
+        run: $(go env GOPATH)/bin/golangci-lint run --timeout=10m ./...
+
+  # 2. 单元测试
+  test:
+    name: Test
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.2'
+          cache: true
+      - name: Run tests
+        run: go test -race -v ./...
+
+  # 3. 跨平台构建
+  build:
+    name: Build Binaries
+    needs: test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [ linux, darwin, windows ]
+        goarch: [ amd64, arm64 ]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.2'
+      - name: Build binaries
+        run: |
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
+          mkdir -p output
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-s -w" -o output/user-${{ matrix.goos }}-${{ matrix.goarch }}$EXT   ./cmd/user
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-s -w" -o output/worker-${{ matrix.goos }}-${{ matrix.goarch }}$EXT ./cmd/worker
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: output/
+
+  # 4. 发布 Release
+  release:
+    name: Create Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "release-artifacts/**/*"
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            项目自动发布。
+            - 构建自 commit: `${{ github.sha }}`
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send DingTalk Notification
+        uses: northwang-lucky/chatbot-webhook-client@v1.1.1
+        with:
+          app: DingTalk
+          webhook: ${{ secrets.DINGTALK_WEBHOOK }}
+          secret: ${{ secrets.DINGTALK_SECRET }}
+          template: >-
+            {
+              "msgtype": "markdown",
+              "markdown": {
+                "title": "项目发布成功",
+                "text": "### 🚀 项目 [${{ github.event.repository.name }}] 发布成功\n\n**版本**: ${{ github.ref_name }}\n\n[点击前往 GitHub 查看详情](${{ github.event.repository.html_url }}/releases/tag/${{ github.ref_name }})"
+              }
+            }
