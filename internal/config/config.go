@@ -20,8 +20,15 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host string `mapstructure:"host"`
-	Port int    `mapstructure:"port"`
+	Host            string        `mapstructure:"host"`
+	Port            int           `mapstructure:"port"`
+	User            string        `mapstructure:"user"`
+	Password        string        `mapstructure:"password"`
+	DBName          string        `mapstructure:"dbname"`
+	MaxIdleConns    int           `mapstructure:"max_idle_conns"`    // 连接池最大空闲连接数
+	MaxOpenConns    int           `mapstructure:"max_open_conns"`    // 连接池最大打开连接数
+	ConnMaxLifetime time.Duration `mapstructure:"conn_max_lifetime"` // 连接最大存活时间
+	QueryTimeout    time.Duration `mapstructure:"query_timeout"`     // 单次查询超时时间
 }
 
 type RedisConfig struct {
@@ -66,4 +73,11 @@ func (r *RedisConfig) RedisAddr() string {
 }
 func (d *DatabaseConfig) DatabaseAddr() string {
 	return fmt.Sprintf("%s:%d", d.Host, d.Port)
+}
+
+// DSN 返回 MySQL 连接字符串
+func (d *DatabaseConfig) DSN() string {
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		d.User, d.Password, d.Host, d.Port, d.DBName,
+	)
 }

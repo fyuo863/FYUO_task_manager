@@ -3,6 +3,7 @@ package main
 import (
 	"FYUO_task_manager/internal/config"
 	"FYUO_task_manager/internal/database"
+	"FYUO_task_manager/internal/model"
 	"FYUO_task_manager/internal/worker"
 	"FYUO_task_manager/pkg/log"
 	"context"
@@ -19,6 +20,19 @@ func main() {
 		log.Logger.Fatalf("[启动失败] 加载配置: %v", err)
 	}
 	fmt.Println(cfg)
+
+	//初始化database
+	if err := database.InitMySQL(&cfg.Database); err != nil {
+		log.Logger.Fatalf("[Worker启动失败] 初始化 MySQL: %v", err)
+	}
+	log.Logger.Info("[Worker]", "MySQL", "连接成功")
+	// 自动建表：根据 GORM 模型的 struct tag 创建/更新表结构
+	if err := database.Migrate(&model.User{}, &model.Task{}); err != nil {
+		log.Logger.Fatalf("[启动失败] 数据库迁移: %v", err)
+	}
+
+	//初始化Redis
+
 	if err := database.InitRedis(&cfg.Redis); err != nil {
 		log.Logger.Fatalf("[启动失败] 初始化Redis: %v", err)
 	}

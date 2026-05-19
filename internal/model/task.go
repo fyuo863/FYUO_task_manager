@@ -12,7 +12,7 @@ type Task struct {
 	Title   string     `json:"title"`
 	Author  string     `json:"author"`
 	Content string     `json:"content"`
-	Time    Time       `json:"time"`
+	Time    Time       `gorm:"embedded;embeddedPrefix:time_"`
 	Status  TaskStatus `json:"status"`
 }
 

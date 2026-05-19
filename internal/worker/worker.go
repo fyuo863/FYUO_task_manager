@@ -99,7 +99,6 @@ func (p *Pool) processTaskTest(ctx context.Context, task *model.Task, workerID i
 	default:
 		log.Logger.Info("[Worker] 处理任务", "WorkerID", workerID, "TaskID", task.ID)
 		log.Logger.Info("[Worker]", "任务详情", task)
-
 	}
 }
 

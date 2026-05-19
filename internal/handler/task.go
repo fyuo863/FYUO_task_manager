@@ -41,10 +41,13 @@ func CreateTask(c *gin.Context) {
 		Status: model.TaskStatusRunning,
 	}
 
-	// c.JSON(http.StatusOK, gin.H{ //返回响应
-	// 	"code": 200,
-	// 	"data": task,
-	// })
+	if err := database.DB.Create(&task).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "任务创建失败",
+		})
+		return
+	}
 
 	// TODO: 推入Redis List
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second) //设置超时上下文，防止Redis操作阻塞过久
