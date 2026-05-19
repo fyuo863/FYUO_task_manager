@@ -10,3 +10,7 @@ go项目实战，构建一个任务管理工具
     状态:进行中、已完成、失败
 
 使用Redis+MySQL进行数据持久化，使用Redis List构建消息队列实现系统解耦
+
+解耦worker与user:
+    user调用接口进行创建、查询等操作
+    worker持续接收user发来的操作
