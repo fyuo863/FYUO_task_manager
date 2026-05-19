@@ -18,8 +18,7 @@ RUN go mod download
 COPY . .
 
 # 构建三个入口 (静态编译，去除调试信息)
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/bin/all      . \
- && CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/bin/user     ./cmd/user \
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/bin/user     ./cmd/user \
  && CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/bin/worker   ./cmd/worker
 
 
